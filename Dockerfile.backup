@@ -1,0 +1,45 @@
+# Use Python 3.11 slim image for smaller size and faster startup
+FROM python:3.11-slim
+
+# Set environment variables for Python optimization
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install system dependencies in single layer
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Update CA certificates
+RUN update-ca-certificates
+
+# Set working directory
+WORKDIR /app
+
+# Copy and install Python dependencies first (for better layer caching)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Create non-root user for security
+RUN useradd --create-home --shell /bin/bash app \
+    && chown -R app:app /app
+USER app
+
+# Expose port (Cloud provider will set PORT environment variable)
+EXPOSE 8000
+
+# Health check for Cloud provider (uses PORT environment variable)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import os, requests; requests.get(f'http://localhost:{os.getenv(\"PORT\", \"8000\")}/api/v1/health')" || exit 1
+
+# Use gunicorn with uvicorn workers for better production performance
+CMD ["gunicorn", "main:app", "-c", "gunicorn.conf.py"]

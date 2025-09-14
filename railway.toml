@@ -1,0 +1,15 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+healthcheckPath = "/api/v1/health"
+healthcheckTimeout = 10
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+startCommand = "gunicorn main:app -c gunicorn.conf.py"
+
+[env]
+# Railway will automatically set PORT
+LOG_LEVEL = "INFO"
+PYTHONUNBUFFERED = "1"
+PYTHONDONTWRITEBYTECODE = "1"

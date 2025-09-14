@@ -142,6 +142,9 @@ tmp/
 temp/
 
 # Application specific
-cache/
+# Note: Keep app/cache/ module but ignore cache data
+*.cache
 .cache/
+/cache/
+# Don't ignore app/cache/ - it's a Python module
 test_results/

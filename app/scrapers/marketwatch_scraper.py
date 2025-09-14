@@ -1,10 +1,16 @@
 import logging
 import re
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, TYPE_CHECKING
 from datetime import datetime
-from bs4 import BeautifulSoup, Tag
+# Lazy import for cold start optimization
+# from bs4 import BeautifulSoup, Tag  # Loaded lazily
 from app.scrapers.base_scraper import BaseScraper, ScraperError, DataNotFoundError
 from app.models.dividend import DividendData, DividendCalendarResponse, DividendType
+from app.utils.lazy_imports import get_beautifulsoup
+
+# Import types only for type hints (doesn't affect runtime)
+if TYPE_CHECKING:
+    from bs4 import BeautifulSoup, Tag
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +133,7 @@ class MarketWatchScraper(BaseScraper):
         
         return dividends
     
-    def _extract_company_name(self, soup: BeautifulSoup, symbol: str) -> Optional[str]:
+    def _extract_company_name(self, soup: "BeautifulSoup", symbol: str) -> Optional[str]:
         """Extract company name from MarketWatch page"""
         try:
             # Look for h1 or title with company name
@@ -153,7 +159,7 @@ class MarketWatchScraper(BaseScraper):
         
         return None
     
-    def _extract_dividend_overview(self, soup: BeautifulSoup) -> Dict[str, Any]:
+    def _extract_dividend_overview(self, soup: "BeautifulSoup") -> Dict[str, Any]:
         """Extract dividend overview information from the page"""
         dividend_info = {}
         
@@ -189,7 +195,7 @@ class MarketWatchScraper(BaseScraper):
         
         return dividend_info
     
-    def _extract_dividend_values_from_element(self, element: Tag, dividend_info: Dict[str, Any]):
+    def _extract_dividend_values_from_element(self, element: "Tag", dividend_info: Dict[str, Any]):
         """Extract dividend values from a specific element"""
         try:
             text = element.get_text().lower()
@@ -249,7 +255,7 @@ class MarketWatchScraper(BaseScraper):
         
         return None
     
-    def _parse_dividend_section(self, section: Tag, symbol: str, company_name: Optional[str]) -> Optional[DividendData]:
+    def _parse_dividend_section(self, section: "Tag", symbol: str, company_name: Optional[str]) -> Optional[DividendData]:
         """Parse dividend information from a specific section"""
         try:
             dividend_info = {}

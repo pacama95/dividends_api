@@ -44,27 +44,19 @@ class CustomJSONResponse(JSONResponse):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan manager"""
-    # Startup
+    """Application lifespan manager - optimized for serverless cold start"""
+    # Startup - minimal initialization for fast cold start
     logger.info("🚀 Starting Dividend Calendar API")
     logger.info(f"Log level: {log_level}")
-    logger.info(f"Log file: {log_file or 'Console only'}")
     
-    # Initialize any startup tasks here
-    try:
-        # Test scraper manager
-        from app.scrapers.scraper_manager import scraper_manager
-        logger.info(f"Initialized scraper manager with {len(scraper_manager.scrapers)} scrapers")
-        logger.info(f"Available scrapers: {list(scraper_manager.scrapers.keys())}")
-        
-    except Exception as e:
-        logger.error(f"Error during startup: {e}")
-        raise
+    # Don't initialize scrapers at startup - do it lazily on first request
+    # This saves 1-2 seconds on cold start
+    logger.info("Initialized with lazy loading for optimal cold start")
     
     yield
     
     # Shutdown
-    logger.info("🛑 Shutting down Dividend Calendar API")
+    logger.info("🛑 Shutting down")
 
 
 # Create FastAPI application
@@ -76,7 +68,7 @@ app = FastAPI(
     
     ## Features
     
-    * **Multiple Data Sources**: Scrapes data from Yahoo Finance, MarketWatch, and Investing.com
+    * **Multiple Data Sources**: Scrapes data from Yahoo Finance and MarketWatch
     * **Automatic Fallback**: If one source fails, automatically tries others
     * **Intelligent Caching**: Caches results with configurable TTL to reduce scraping load
     * **Batch Processing**: Support for querying multiple symbols concurrently
@@ -97,7 +89,6 @@ app = FastAPI(
     The API automatically tries multiple sources in order of reliability:
     1. **Yahoo Finance** - Primary source with comprehensive data
     2. **MarketWatch** - Backup source with good coverage
-    3. **Investing.com** - Additional source for broader coverage
     
     ## Caching
     

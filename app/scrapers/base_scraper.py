@@ -1,13 +1,18 @@
 import logging
 import asyncio
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, TYPE_CHECKING
 from datetime import datetime, timedelta
 import aiohttp
 import requests
-from bs4 import BeautifulSoup
+# Lazy import for cold start optimization
+# from bs4 import BeautifulSoup  # Loaded lazily
 import time
 from app.models.dividend import DividendData, DividendCalendarResponse
+
+# Import types only for type hints (doesn't affect runtime)
+if TYPE_CHECKING:
+    from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +70,7 @@ class BaseScraper(ABC):
         
         self._last_request_time = time.time()
     
-    async def _fetch_page(self, url: str, params: Optional[Dict[str, Any]] = None) -> BeautifulSoup:
+    async def _fetch_page(self, url: str, params: Optional[Dict[str, Any]] = None) -> "BeautifulSoup":
         """
         Fetch a page and return BeautifulSoup object
         
@@ -93,6 +98,9 @@ class BaseScraper(ABC):
                         raise ScraperError(f"HTTP {response.status} error fetching {url}")
                     
                     content = await response.text()
+                    # Lazy load BeautifulSoup only when needed
+                    from app.utils.lazy_imports import get_beautifulsoup
+                    BeautifulSoup = get_beautifulsoup()
                     return BeautifulSoup(content, 'html.parser')
                     
         except aiohttp.ClientError as e:

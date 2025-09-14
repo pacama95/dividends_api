@@ -16,7 +16,7 @@ class ScraperManager:
     
     def __init__(self, use_cache: bool = True, cache_ttl: int = 3600):
         """
-        Initialize scraper manager
+        Initialize scraper manager with lazy loading for cold start optimization
         
         Args:
             use_cache: Whether to use caching
@@ -25,20 +25,36 @@ class ScraperManager:
         self.use_cache = use_cache
         self.cache_ttl = cache_ttl
         
-        # Initialize scrapers
-        self.scrapers = {
-            'yahoo': YahooFinanceScraper(),
-            'marketwatch': MarketWatchScraper()
-        }
+        # Lazy initialization - don't create scrapers until needed
+        self._scrapers = None
+        self._scraper_stats = None
         
         # Default priority order (most reliable first)
         self.default_priority = ['yahoo', 'marketwatch']
         
-        # Track scraper performance
-        self.scraper_stats = {
-            name: {'success_count': 0, 'error_count': 0, 'last_success': None, 'last_error': None}
-            for name in self.scrapers.keys()
-        }
+        logger.info("ScraperManager initialized with lazy loading")
+    
+    @property
+    def scrapers(self):
+        """Lazy initialize scrapers on first access"""
+        if self._scrapers is None:
+            logger.info("Initializing scrapers on first use...")
+            self._scrapers = {
+                'yahoo': YahooFinanceScraper(),
+                'marketwatch': MarketWatchScraper()
+            }
+            logger.info(f"Initialized {len(self._scrapers)} scrapers")
+        return self._scrapers
+    
+    @property
+    def scraper_stats(self):
+        """Lazy initialize scraper stats"""
+        if self._scraper_stats is None:
+            self._scraper_stats = {
+                name: {'success_count': 0, 'error_count': 0, 'last_success': None, 'last_error': None}
+                for name in ['yahoo', 'marketwatch']
+            }
+        return self._scraper_stats
     
     async def get_dividend_data(self, 
                                symbol: str, 

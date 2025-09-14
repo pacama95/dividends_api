@@ -3,10 +3,12 @@ import asyncio
 import requests
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
-import yfinance as yf
-import pandas as pd
+# Lazy import heavy dependencies for cold start optimization
+# import yfinance as yf  # Heavy import - loaded lazily
+# import pandas as pd    # Heavy import - loaded lazily
 from app.scrapers.base_scraper import BaseScraper, ScraperError, DataNotFoundError, RateLimitError
 from app.models.dividend import DividendData, DividendCalendarResponse, DividendType
+from app.utils.lazy_imports import get_yfinance, get_pandas
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +93,9 @@ class YahooFinanceScraper(BaseScraper):
         try:
             for attempt in range(max_retries):
                 try:
+                    # Lazy load yfinance only when needed (saves ~1s on cold start)
+                    yf = get_yfinance()
+                    
                     session = requests.Session()
                     session.headers.update({
                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -149,6 +154,8 @@ class YahooFinanceScraper(BaseScraper):
                     if hasattr(date, 'to_pydatetime'):
                         ex_date = date.to_pydatetime()
                     else:
+                        # Lazy load pandas only when needed
+                        pd = get_pandas()
                         ex_date = pd.to_datetime(date).to_pydatetime()
                     
                     # Create dividend data object
@@ -354,7 +361,12 @@ class YahooFinanceScraper(BaseScraper):
             
             for date, amount in dividend_data.items():
                 try:
-                    ex_date = date.to_pydatetime() if hasattr(date, 'to_pydatetime') else pd.to_datetime(date).to_pydatetime()
+                    if hasattr(date, 'to_pydatetime'):
+                        ex_date = date.to_pydatetime()
+                    else:
+                        # Lazy load pandas only when needed
+                        pd = get_pandas()
+                        ex_date = pd.to_datetime(date).to_pydatetime()
                     
                     dividend = DividendData(
                         symbol=symbol,
